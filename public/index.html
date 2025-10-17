@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Escolha o Seu Presente de Aniversário</title>
+  <meta name="description" content="Página de surpresa com duas opções e uma grade animada de ideias de presentes." />
+  <link rel="preconnect" href="https://images.unsplash.com" crossorigin>
+  <style>
+    :root{
+      --bg:#0e1116; --card:#141923; --ink:#eaf0ff; --muted:#9aa3b2; --accent:#a78bfa; --accent-2:#60a5fa;
+      --maxw:1100px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu; color:var(--ink);
+      background:
+        radial-gradient(1200px 800px at 80% -20%, #1b2440 0%, #0e1116 40%),
+        linear-gradient(180deg,#0f1424, #0b0f18);
+      display:flex; align-items:center; justify-content:center; padding:24px;
+    }
+    .wrap{width:100%; max-width:var(--maxw); background:linear-gradient(180deg,#121829 0%, #0f1526 100%);
+      border:1px solid #222a3d; border-radius:20px; box-shadow:0 12px 40px rgba(0,0,0,.45); padding:28px; overflow:hidden}
+
+    .grid{
+      display:grid; gap:28px; align-items:start;
+      grid-template-columns: 1.1fr 1.4fr;
+    }
+
+    /* Left panel */
+    .left{display:grid; gap:22px}
+    h1{margin:0; line-height:1.15; font-weight:800; font-size:clamp(28px, 4vw, 44px); letter-spacing:.2px}
+    .buttons{display:flex; gap:14px; flex-wrap:wrap}
+    .btn{
+      appearance:none; border:0; cursor:pointer; padding:14px 18px; border-radius:14px; font-weight:700; font-size:16px;
+      color:#0b1020; background:linear-gradient(180deg, var(--accent), #7c5cf4); box-shadow:0 10px 24px rgba(124,92,244,.35);
+    }
+    .btn.secondary{background:linear-gradient(180deg, var(--accent-2), #3b82f6); box-shadow:0 10px 24px rgba(59,130,246,.35)}
+    .btn:active{transform:translateY(1px)}
+    .note{color:var(--muted); font-size:14px}
+
+    /* Right panel: animated idea grid */
+    .idea-grid{display:grid; grid-template-columns: repeat(3, 1fr); gap:14px}
+    .idea{
+      position:relative; overflow:hidden; border-radius:16px; height:150px; border:1px solid #26304a; background:#0d1324;
+      box-shadow:0 8px 18px rgba(0,0,0,.35);
+      animation:float 8s ease-in-out infinite;
+    }
+    .idea:nth-child(odd){animation-delay: -2s}
+    .idea:nth-child(3n){animation-delay: -4s}
+    .idea img{width:100%; height:100%; object-fit:cover; display:block; filter:saturate(1.05) contrast(1.05)}
+    .idea::after{content:""; position:absolute; inset:0; background:linear-gradient(180deg, transparent 60%, rgba(0,0,0,.25));}
+    .tag{position:absolute; left:10px; bottom:10px; font-size:12px; padding:6px 8px; border-radius:999px; color:#dbeafe; background:rgba(59,130,246,.2); border:1px solid rgba(59,130,246,.35); backdrop-filter:blur(4px)}
+
+    @keyframes float{0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)}}
+
+    /* Mobile */
+    @media (max-width: 860px){
+      .grid{grid-template-columns:1fr; gap:22px}
+      .idea-grid{grid-template-columns: repeat(3, 1fr)}
+      .idea{height:110px}
+      .buttons{justify-content:center}
+      .wrap{padding:22px}
+      h1{text-align:center}
+      .left{justify-items:center}
+    }
+
+    @media (max-width: 520px){ .idea-grid{grid-template-columns: repeat(3, 1fr)} }
+  </style>
+</head>
+<body>
+  <main class="wrap" role="main" id="app">
+    <div class="grid">
+      <!-- Left column -->
+      <section class="left">
+        <h1>Escolha o Seu Presente de Aniversário</h1>
+        <div class="buttons">
+          <button class="btn" id="op1">Opção 1</button>
+          <button class="btn secondary" id="op2">Opção 2</button>
+        </div>
+        <p class="note">Dica: você pode ligar os botões ao seu fluxo do n8n/WhatsApp, editando os links no script abaixo.</p>
+      </section>
+
+      <!-- Right column: animated ideas -->
+      <section>
+        <div class="idea-grid" id="ideaGrid" aria-live="polite"></div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+// =============================
+// 1) LISTAS DE IMAGENS (EDITE)
+// =============================
+// Coloque aqui URLs diretos de imagens (JPG/PNG/WebP).
+// Se deixar vazio, usamos fallback do Unsplash Source.
+const IMAGE_POOLS = {
+  aleatorias: [
+    // "https://teus-arquivos/praia-1.jpg",
+    // "https://teus-arquivos/viagem-2.jpg",
+  ],
+  lugares: [
+    // "https://teus-arquivos/sao-sebastiao-1.jpg",
+    // "https://teus-arquivos/por-do-sol-2.jpg",
+  ],
+  tenis_roupas: [
+    // "https://teus-arquivos/tenis-1.jpg",
+    // "https://teus-arquivos/roupa-1.jpg",
+  ],
+  hotel: [
+    // "https://teus-arquivos/hotel-1.jpg",
+    // "https://teus-arquivos/hotel-2.jpg",
+  ],
+  palafita: [
+    // "https://teus-arquivos/palafita-1.jpg",
+    // "https://teus-arquivos/palafita-2.jpg",
+  ],
+  tenis_mix_50: [
+    // "https://teus-arquivos/tenis-branco-1.jpg",
+    // "https://teus-arquivos/tenis-colorido-1.jpg",
+  ],
+};
+
+// Imagem final por “presente” (aparece na última tela)
+const FINAL_IMAGES = {
+  hotel: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa",
+  tenis_branco: "https://images.unsplash.com/photo-1519741497674-611481863552"
+};
+
+// =============================
+// 2) MÁQUINA DE ESTADOS (2 BTNS)
+// =============================
+const FSM = {
+  start: "S1",
+  states: {
+    // — Passo 1 —
+    S1: {
+      left:  { label: "Experiência", alert: "Ótima escolha, experiências são o melhor jeito de viver a vida.",   theme: "aleatorias", next: "S2_EXP" },
+      right: { label: "Objeto",      alert: "Certo! Vamos olhar opções de presente físico 😉",                   theme: "aleatorias", next: "S2_OBJ"  },
+    },
+
+    // — Passo 2 (Experiência) —
+    S2_EXP: {
+      left:  { label: "Praia",     alert: "Que bom gosto! Praia combina com o calor do Brasil.",                theme: "lugares",     next: "S3_EXP_PRAIA" },
+      right: { label: "Montanhas", alert: "Que bom gosto! Montanhas ficam melhores quando próximas de praias.", theme: "lugares",     next: "S3_EXP_MONT"  },
+    },
+
+    // — Passo 3 (Experiência > Praia/Montanhas) —
+    S3_EXP_PRAIA: {
+      left:  { label: "Hotel",    alert: "Perfeito, seu presente já está pronto!",                                                   theme: "hotel",    final: { imageKey: "hotel", title: "Este é o seu presente de aniversário" } },
+      right: { label: "Palafita", alert: "Perfeito, apesar de escolher palafitas, reservamos um hotel já que uma princesa merece o melhor.", theme: "palafita", final: { imageKey: "hotel", title: "Este é o seu presente de aniversário" } },
+    },
+    S3_EXP_MONT: {
+      left:  { label: "Hotel",    alert: "Perfeito, seu presente já está pronto!",                                                   theme: "hotel",    final: { imageKey: "hotel", title: "Este é o seu presente de aniversário" } },
+      right: { label: "Palafita", alert: "Perfeito, apesar de escolher palafitas, reservamos um hotel já que uma princesa merece o melhor.", theme: "palafita", final: { imageKey: "hotel", title: "Este é o seu presente de aniversário" } },
+    },
+
+    // — Passo 2 (Objeto) —
+    S2_OBJ: {
+      left:  { label: "Tênis",  alert: "Boa! Olhando estilos de tênis e combinações com roupas.", theme: "tenis_roupas", next: "S3_TENIS"  },
+      right: { label: "Roupas", alert: "Perfeito! Vamos ver looks e combinações com tênis.",      theme: "tenis_roupas", next: "S3_ROUPAS" },
+    },
+
+    // — Passo 3 (Objeto > Tênis/Roupas) —
+    S3_TENIS: {
+      left:  { label: "Branco",   alert: "Perfeito, seu presente já está pronto!",                                                                     theme: "tenis_mix_50", final: { imageKey: "tenis_branco", title: "Este é o seu presente de aniversário" } },
+      right: { label: "Colorido", alert: "Tênis coloridos você já tem muito; estou escolhendo um branco porque combina mais contigo.",                 theme: "tenis_mix_50", final: { imageKey: "tenis_branco", title: "Este é o seu presente de aniversário" } },
+    },
+    S3_ROUPAS: {
+      left:  { label: "Branco",   alert: "Perfeito, seu presente já está pronto!",                                                                     theme: "tenis_mix_50", final: { imageKey: "tenis_branco", title: "Este é o seu presente de aniversário" } },
+      right: { label: "Colorido", alert: "Tênis coloridos você já tem muito; estou escolhendo um branco porque combina mais contigo.",                 theme: "tenis_mix_50", final: { imageKey: "tenis_branco", title: "Este é o seu presente de aniversário" } },
+    },
+  }
+};
+
+// ===================================
+// 3) RENDERIZAÇÃO (botões + imagens)
+// ===================================
+const $ = (s)=>document.querySelector(s);
+const btnL = document.getElementById("op1");
+const btnR = document.getElementById("op2");
+const grid = document.getElementById("ideaGrid");         // já existe no HTML
+const appRoot = document.getElementById("app");
+const finalWrapId = "final-present-wrap";
+
+// util: pega N urls do pool, com fallback Unsplash
+function pickImages(theme, n=9) {
+  const pool = IMAGE_POOLS[theme] || [];
+  const arr = [...pool];
+  while (arr.length < n) {
+    // fallback Unsplash Source
+    const kw = ({aleatorias:"travel", lugares:"beach", hotel:"hotel", palafita:"bungalow", tenis_roupas:"sneakers", tenis_mix_50:"sneakers"})[theme] || "travel";
+    const w = 260 + Math.floor(Math.random()*120);
+    const h = 180 + Math.floor(Math.random()*120);
+    arr.push(`https://source.unsplash.com/random/${w}x${h}/?${encodeURIComponent(kw)}`);
+  }
+  return arr.slice(0, n);
+}
+
+function renderGrid(theme){
+  if(!grid) return;
+  grid.innerHTML = "";
+  const urls = pickImages(theme, 9);
+  urls.forEach(u=>{
+    const fig = document.createElement("figure");
+    fig.className = "idea";
+    const img = document.createElement("img");
+    img.src = u; img.loading="lazy"; img.decoding="async"; img.alt="produto";
+    fig.appendChild(img);
+    const tag = document.createElement('figcaption');
+    tag.className = 'tag';
+    tag.textContent = 'produto';
+    fig.appendChild(tag);
+    grid.appendChild(fig);
+    img.addEventListener('load', ()=>{
+      img.animate([{transform:'scale(1.05)'},{transform:'scale(1.1)'}], {duration:8000,iterations:Infinity,direction:'alternate',easing:'ease-in-out'});
+    });
+  });
+  // garante que a seção de final desaparece se voltar
+  const fin = document.getElementById(finalWrapId);
+  if (fin) fin.remove();
+}
+
+function showFinal(imageKey, title="Este é o seu presente de aniversário"){
+  // esconde grid e cria bloco final
+  if (grid) grid.innerHTML = "";
+  const wrapper = document.createElement("section");
+  wrapper.id = finalWrapId;
+  wrapper.style = "display:grid;place-items:center;gap:16px;padding:20px;";
+  const h = document.createElement("h2");
+  h.textContent = title;
+  const img = document.createElement("img");
+  img.src = FINAL_IMAGES[imageKey] || pickImages("aleatorias",1)[0];
+  img.alt = "Imagem do presente";
+  img.style = "max-width:640px;width:100%;border-radius:16px;border:1px solid #2a3764";
+  wrapper.appendChild(h); wrapper.appendChild(img);
+  appRoot?.appendChild(wrapper);
+}
+
+let current = FSM.start;
+
+function paintButtons(){
+  const st = FSM.states[current];
+  btnL.textContent = st.left.label;
+  btnR.textContent = st.right.label;
+}
+
+async function handle(choice /* 'left'|'right' */){
+  const st = FSM.states[current];
+  const opt = st[choice];
+  // alerta
+  alert(opt.alert);
+  // imagens do tema do passo
+  if (opt.theme) renderGrid(opt.theme);
+  // final ou próximo estado
+  if (opt.final){
+    showFinal(opt.final.imageKey, opt.final.title);
+  } else {
+    current = opt.next;
+    paintButtons();
+  }
+}
+
+// listeners
+btnL.addEventListener("click", ()=>handle("left"));
+btnR.addEventListener("click", ()=>handle("right"));
+
+// init
+paintButtons();
+renderGrid("aleatorias");
+  </script>
+</body>
+</html>
