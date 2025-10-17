@@ -23,7 +23,7 @@
     .wrap{width:100%; max-width:var(--maxw); background:linear-gradient(180deg,#121829 0%, #0f1526 100%);
       border:1px solid #222a3d; border-radius:20px; box-shadow:0 12px 40px rgba(0,0,0,.45); padding:28px; overflow:hidden}
 
-    .grid{
+    .layout{
       display:grid; gap:28px; align-items:start;
       grid-template-columns: 1.1fr 1.4fr;
     }
@@ -53,11 +53,23 @@
     .idea::after{content:""; position:absolute; inset:0; background:linear-gradient(180deg, transparent 60%, rgba(0,0,0,.25));}
     .tag{position:absolute; left:10px; bottom:10px; font-size:12px; padding:6px 8px; border-radius:999px; color:#dbeafe; background:rgba(59,130,246,.2); border:1px solid rgba(59,130,246,.35); backdrop-filter:blur(4px)}
 
+    .final-present{
+      display:none;
+      place-items:center;
+      gap:16px;
+      padding:20px;
+      text-align:center;
+    }
+    .final-present.active{display:grid}
+    .final-present img{max-width:640px; width:100%; border-radius:16px; border:1px solid #2a3764}
+
+    .hidden{display:none !important}
+
     @keyframes float{0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)}}
 
     /* Mobile */
     @media (max-width: 860px){
-      .grid{grid-template-columns:1fr; gap:22px}
+      .layout{grid-template-columns:1fr; gap:22px}
       .idea-grid{grid-template-columns: repeat(3, 1fr)}
       .idea{height:110px}
       .buttons{justify-content:center}
@@ -70,8 +82,8 @@
   </style>
 </head>
 <body>
-  <main class="wrap" role="main" id="app">
-    <div class="grid">
+  <main class="wrap" role="main">
+    <div class="layout">
       <!-- Left column -->
       <section class="left">
         <h1>Escolha o Seu Presente de Aniversário</h1>
@@ -85,11 +97,18 @@
       <!-- Right column: animated ideas -->
       <section>
         <div class="idea-grid" id="ideaGrid" aria-live="polite"></div>
+        <section class="final-present" id="finalPresent" aria-hidden="true" aria-live="polite"></section>
       </section>
     </div>
   </main>
 
   <script>
+const btnL = document.getElementById("op1");
+const btnR = document.getElementById("op2");
+const ideaGrid = document.getElementById("ideaGrid");
+const finalContainer = document.getElementById("finalPresent");
+const finalWrapId = "final-present-wrap";
+
 // =============================
 // 1) LISTAS DE IMAGENS (EDITE)
 // =============================
@@ -177,30 +196,31 @@ const FSM = {
 // ===================================
 // 3) RENDERIZAÇÃO (botões + imagens)
 // ===================================
-const $ = (s)=>document.querySelector(s);
-const btnL = document.getElementById("op1");
-const btnR = document.getElementById("op2");
-const grid = document.getElementById("ideaGrid");         // já existe no HTML
-const appRoot = document.getElementById("app");
-const finalWrapId = "final-present-wrap";
+const finalTitleId = "final-present-title";
 
-// util: pega N urls do pool, com fallback Unsplash
-function pickImages(theme, n=9) {
+function pickImages(theme, n = 9) {
   const pool = IMAGE_POOLS[theme] || [];
   const arr = [...pool];
   while (arr.length < n) {
-    // fallback Unsplash Source
     const kw = ({aleatorias:"travel", lugares:"beach", hotel:"hotel", palafita:"bungalow", tenis_roupas:"sneakers", tenis_mix_50:"sneakers"})[theme] || "travel";
-    const w = 260 + Math.floor(Math.random()*120);
-    const h = 180 + Math.floor(Math.random()*120);
+    const w = 260 + Math.floor(Math.random() * 120);
+    const h = 180 + Math.floor(Math.random() * 120);
     arr.push(`https://source.unsplash.com/random/${w}x${h}/?${encodeURIComponent(kw)}`);
   }
   return arr.slice(0, n);
 }
 
+function resetFinalView() {
+  if (!finalContainer) return;
+  finalContainer.classList.remove("active");
+  finalContainer.setAttribute("aria-hidden", "true");
+  finalContainer.innerHTML = "";
+}
+
 function renderGrid(theme){
-  if(!grid) return;
-  grid.innerHTML = "";
+  if(!ideaGrid) return;
+  ideaGrid.innerHTML = "";
+  ideaGrid.classList.remove("hidden");
   const urls = pickImages(theme, 9);
   urls.forEach(u=>{
     const fig = document.createElement("figure");
@@ -212,30 +232,39 @@ function renderGrid(theme){
     tag.className = 'tag';
     tag.textContent = 'produto';
     fig.appendChild(tag);
-    grid.appendChild(fig);
+    ideaGrid.appendChild(fig);
     img.addEventListener('load', ()=>{
       img.animate([{transform:'scale(1.05)'},{transform:'scale(1.1)'}], {duration:8000,iterations:Infinity,direction:'alternate',easing:'ease-in-out'});
     });
   });
-  // garante que a seção de final desaparece se voltar
-  const fin = document.getElementById(finalWrapId);
-  if (fin) fin.remove();
+  resetFinalView();
 }
 
 function showFinal(imageKey, title="Este é o seu presente de aniversário"){
-  // esconde grid e cria bloco final
-  if (grid) grid.innerHTML = "";
-  const wrapper = document.createElement("section");
+  if (ideaGrid) {
+    ideaGrid.innerHTML = "";
+    ideaGrid.classList.add("hidden");
+  }
+  if (!finalContainer) return;
+  resetFinalView();
+
+  const wrapper = document.createElement("div");
   wrapper.id = finalWrapId;
-  wrapper.style = "display:grid;place-items:center;gap:16px;padding:20px;";
+
   const h = document.createElement("h2");
+  h.id = finalTitleId;
   h.textContent = title;
+
   const img = document.createElement("img");
   img.src = FINAL_IMAGES[imageKey] || pickImages("aleatorias",1)[0];
   img.alt = "Imagem do presente";
-  img.style = "max-width:640px;width:100%;border-radius:16px;border:1px solid #2a3764";
-  wrapper.appendChild(h); wrapper.appendChild(img);
-  appRoot?.appendChild(wrapper);
+
+  wrapper.appendChild(h);
+  wrapper.appendChild(img);
+
+  finalContainer.appendChild(wrapper);
+  finalContainer.classList.add("active");
+  finalContainer.setAttribute("aria-hidden", "false");
 }
 
 let current = FSM.start;
@@ -246,14 +275,11 @@ function paintButtons(){
   btnR.textContent = st.right.label;
 }
 
-async function handle(choice /* 'left'|'right' */){
+function handle(choice /* 'left'|'right' */){
   const st = FSM.states[current];
   const opt = st[choice];
-  // alerta
   alert(opt.alert);
-  // imagens do tema do passo
   if (opt.theme) renderGrid(opt.theme);
-  // final ou próximo estado
   if (opt.final){
     showFinal(opt.final.imageKey, opt.final.title);
   } else {
@@ -262,11 +288,9 @@ async function handle(choice /* 'left'|'right' */){
   }
 }
 
-// listeners
 btnL.addEventListener("click", ()=>handle("left"));
 btnR.addEventListener("click", ()=>handle("right"));
 
-// init
 paintButtons();
 renderGrid("aleatorias");
   </script>
