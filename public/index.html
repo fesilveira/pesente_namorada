@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Escolha o Seu Presente de Aniversário</title>
   <meta name="description" content="Página de surpresa com duas opções e uma grade animada de ideias de presentes." />
-  <link rel="preconnect" href="https://images.unsplash.com" crossorigin>
   <style>
     :root{
       --bg:#0e1116; --card:#141923; --ink:#eaf0ff; --muted:#9aa3b2; --accent:#a78bfa; --accent-2:#60a5fa;
@@ -51,8 +50,8 @@
     .idea:nth-child(3n){animation-delay: -4s}
     .idea img{width:100%; height:100%; object-fit:cover; display:block; filter:saturate(1.05) contrast(1.05)}
     .idea::after{content:""; position:absolute; inset:0; background:linear-gradient(180deg, transparent 60%, rgba(0,0,0,.25));}
-    .tag{position:absolute; left:10px; bottom:10px; font-size:12px; padding:6px 8px; border-radius:999px; color:#dbeafe; background:rgba(59,130,246,.2); border:1px solid rgba(59,130,246,.35); backdrop-filter:blur(4px)}
 
+    .layout.final{grid-template-columns:1fr; justify-items:center}
     .final-present{
       display:none;
       place-items:center;
@@ -107,18 +106,19 @@
   </main>
 
   <script>
+const layout = document.querySelector(".layout");
+const leftSection = document.querySelector(".left");
 const btnL = document.getElementById("op1");
 const btnR = document.getElementById("op2");
 const optionsWrap = document.getElementById("options");
 const ideaGrid = document.getElementById("ideaGrid");
 const finalContainer = document.getElementById("finalPresent");
-const finalWrapId = "final-present-wrap";
 
 // =============================
 // 1) LISTAS DE IMAGENS (EDITE)
 // =============================
 // Coloque aqui URLs diretos de imagens (JPG/PNG/WebP).
-// Se deixar vazio, usamos fallback do Unsplash Source.
+// Se deixar vazio, usamos fallback do LoremFlickr baseado no tema.
 const IMAGE_POOLS = {
   aleatorias: [
     // "https://teus-arquivos/praia-1.jpg",
@@ -5386,12 +5386,12 @@ const FSM = {
     // — Passo 3 (Objeto > Tênis/Roupas) —
     S3_TENIS: {
       left:  { label: "Branco",   alert: "Perfeito, seu presente já está pronto!",                                                                     theme: "tenis_mix_50", final: { imageKey: "tenis_branco", title: "Este é o seu presente de aniversário" } },
-      right: { label: "Colorido", alert: "Tênis coloridos você já tem muito; estou escolhendo um branco porque combina mais contigo.",                 theme: "tenis_mix_50", final: { imageKey: "tenis_branco", title: "Este é o seu presente de aniversário" } },
+      right: { label: "Colorido", alert: "Você já tem muitos tênis coloridos; preparei um branco novinho que combina com tudo.",                 theme: "tenis_mix_50", final: { imageKey: "tenis_branco", title: "Este é o seu presente de aniversário" } },
     },
     S3_ROUPAS: {
       left:  { label: "Branco",   alert: "Roupas você já tem muito; preparei um tênis branco que combina com tudo.",
                        theme: "tenis_mix_50", final: { imageKey: "tenis_branco", title: "Este é o seu presente de aniversário" } },
-      right: { label: "Colorido", alert: "Roupas você já tem muito; escolhi um tênis branco que vai com qualquer look.",                 theme: "tenis_mix_50", final: { imageKey: "tenis_branco", title: "Este é o seu presente de aniversário" } },
+      right: { label: "Colorido", alert: "Você já tem muitos tênis coloridos; escolhi um branco que vai com qualquer look.",                 theme: "tenis_mix_50", final: { imageKey: "tenis_branco", title: "Este é o seu presente de aniversário" } },
     },
   }
 };
@@ -5399,77 +5399,95 @@ const FSM = {
 // ===================================
 // 3) RENDERIZAÇÃO (botões + imagens)
 // ===================================
-const finalTitleId = "final-present-title";
+const KEYWORD_BY_THEME = {
+  aleatorias: "travel",
+  lugares: "beach",
+  hotel: "luxury,hotel",
+  palafita: "bungalow,overwater",
+  tenis_roupas: "sneakers,fashion",
+  tenis_mix_50: "white sneakers"
+};
+
+function fallbackImage(theme){
+  const raw = KEYWORD_BY_THEME[theme] || KEYWORD_BY_THEME.aleatorias;
+  const keyword = raw.split(',').map(part => part.trim().replace(/\s+/g, '-')).join(',');
+  const w = 260 + Math.floor(Math.random() * 120);
+  const h = 180 + Math.floor(Math.random() * 120);
+  const seed = Math.random().toString(36).slice(2, 10);
+  return `https://loremflickr.com/${w}/${h}/${keyword}?random=${seed}`;
+}
 
 function pickImages(theme, n = 9) {
   const pool = IMAGE_POOLS[theme] || [];
   const arr = [...pool];
   while (arr.length < n) {
-    const kw = ({aleatorias:"travel", lugares:"beach", hotel:"hotel", palafita:"bungalow", tenis_roupas:"sneakers", tenis_mix_50:"sneakers"})[theme] || "travel";
-    const w = 260 + Math.floor(Math.random() * 120);
-    const h = 180 + Math.floor(Math.random() * 120);
-    arr.push(`https://source.unsplash.com/random/${w}x${h}/?${encodeURIComponent(kw)}`);
+    arr.push(fallbackImage(theme));
   }
   return arr.slice(0, n);
 }
 
-function resetFinalView() {
-  if (!finalContainer) return;
-  finalContainer.classList.remove("active");
-  finalContainer.setAttribute("aria-hidden", "true");
-  finalContainer.innerHTML = "";
-  optionsWrap?.classList.remove("hidden");
+function showSelectionUI(){
+  leftSection?.classList.remove('hidden');
+  optionsWrap?.classList.remove('hidden');
+  ideaGrid?.classList.remove('hidden');
+  layout?.classList.remove('final');
+  if (finalContainer){
+    finalContainer.classList.remove('active');
+    finalContainer.setAttribute('aria-hidden','true');
+    finalContainer.innerHTML = '';
+  }
+}
+
+function hideSelectionUI(){
+  leftSection?.classList.add('hidden');
+  optionsWrap?.classList.add('hidden');
+  ideaGrid?.classList.add('hidden');
+  layout?.classList.add('final');
 }
 
 function renderGrid(theme){
   if(!ideaGrid) return;
+  showSelectionUI();
   ideaGrid.innerHTML = "";
-  ideaGrid.classList.remove("hidden");
   const urls = pickImages(theme, 9);
   urls.forEach(u=>{
     const fig = document.createElement("figure");
     fig.className = "idea";
     const img = document.createElement("img");
-    img.src = u; img.loading="lazy"; img.decoding="async"; img.alt="produto";
+    img.src = u;
+    img.loading="lazy";
+    img.decoding="async";
+    img.alt="Sugestão de presente";
+    img.referrerPolicy = "no-referrer";
+    const onError = () => {
+      img.removeEventListener('error', onError);
+      img.src = fallbackImage(theme);
+    };
+    img.addEventListener('error', onError);
     fig.appendChild(img);
-    const tag = document.createElement('figcaption');
-    tag.className = 'tag';
-    tag.textContent = 'produto';
-    fig.appendChild(tag);
     ideaGrid.appendChild(fig);
     img.addEventListener('load', ()=>{
       img.animate([{transform:'scale(1.05)'},{transform:'scale(1.1)'}], {duration:8000,iterations:Infinity,direction:'alternate',easing:'ease-in-out'});
     });
   });
-  resetFinalView();
 }
 
 function showFinal(imageKey, title="Este é o seu presente de aniversário"){
-  if (ideaGrid) {
-    ideaGrid.innerHTML = "";
-    ideaGrid.classList.add("hidden");
+  hideSelectionUI();
+  const imageSrc = FINAL_IMAGES[imageKey] || fallbackImage('aleatorias');
+  if (finalContainer){
+    finalContainer.innerHTML = '';
+    const h = document.createElement('h2');
+    h.textContent = title;
+    const img = document.createElement('img');
+    img.src = imageSrc;
+    img.alt = "Imagem do presente";
+    img.loading = 'lazy';
+    finalContainer.appendChild(h);
+    finalContainer.appendChild(img);
+    finalContainer.classList.add('active');
+    finalContainer.setAttribute('aria-hidden','false');
   }
-  if (!finalContainer) return;
-  resetFinalView();
-
-  const wrapper = document.createElement("div");
-  wrapper.id = finalWrapId;
-
-  const h = document.createElement("h2");
-  h.id = finalTitleId;
-  h.textContent = title;
-
-  const img = document.createElement("img");
-  img.src = FINAL_IMAGES[imageKey] || pickImages("aleatorias",1)[0];
-  img.alt = "Imagem do presente";
-
-  wrapper.appendChild(h);
-  wrapper.appendChild(img);
-
-  finalContainer.appendChild(wrapper);
-  finalContainer.classList.add("active");
-  finalContainer.setAttribute("aria-hidden", "false");
-  optionsWrap?.classList.add("hidden");
 }
 
 let current = FSM.start;
@@ -5484,10 +5502,10 @@ function handle(choice /* 'left'|'right' */){
   const st = FSM.states[current];
   const opt = st[choice];
   alert(opt.alert);
-  if (opt.theme) renderGrid(opt.theme);
   if (opt.final){
     showFinal(opt.final.imageKey, opt.final.title);
   } else {
+    if (opt.theme) renderGrid(opt.theme);
     current = opt.next;
     paintButtons();
   }
